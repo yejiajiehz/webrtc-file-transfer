@@ -5,20 +5,32 @@ export async function send(channel: RTCDataChannel, file: File) {
 
   // 切片
   const chunkSize = 16 * 1024;
-  const buffer = await file.arrayBuffer();
+  let buffer = await file.arrayBuffer();
+
+  // if (channel.readyState !== "open") {
+  //   console.error("连接未打开");
+  //   return;
+  // }
 
   // 首先传递文件整体大小
   channel.send(
     JSON.stringify({ name: file.name, byteLength: buffer.byteLength })
   );
 
-  let offset = 0;
-  let chunk = buffer.slice(offset, chunkSize);
+  console.log("发送文件信息", {
+    name: file.name,
+    byteLength: buffer.byteLength,
+  });
 
-  while (chunk.byteLength) {
+  while (buffer.byteLength > chunkSize) {
+    const chunk = buffer.slice(0, chunkSize);
     channel.send(chunk);
-    offset += chunk.byteLength;
-
-    chunk = buffer.slice(offset, chunkSize);
+    console.log("发送文件内容", chunk);
+    buffer = buffer.slice(chunkSize);
   }
+
+  if (buffer.byteLength) {
+    channel.send(buffer);
+  }
+  console.log("完成发送");
 }

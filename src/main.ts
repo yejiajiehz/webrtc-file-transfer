@@ -10,4 +10,4 @@ import { catchGlobalPromiseError } from "@/utils/errorHandler";
 const app = createApp(App);
 app.use(store).use(router).mount("#app");
 
-catchGlobalPromiseError();
+// catchGlobalPromiseError();

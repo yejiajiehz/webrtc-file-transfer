@@ -1,5 +1,5 @@
 // B：接收文件
-export function receive(peerConn: RTCPeerConnection) {
+export function receive(peerConn: RTCPeerConnection, cb: Function) {
   peerConn.ondatachannel = function (event) {
     const channel = event.channel;
 
@@ -9,6 +9,8 @@ export function receive(peerConn: RTCPeerConnection) {
     let count = 0;
 
     channel.onmessage = (event) => {
+      console.log("接收到文件信息", event.data);
+
       // 第一条信息，接收文件大小
       if (typeof event.data === "string") {
         const file = JSON.parse(event.data);
@@ -25,17 +27,17 @@ export function receive(peerConn: RTCPeerConnection) {
 
       // 完成接收
       if (count === buf.byteLength) {
-        downloadBlob(name, [buf.buffer]);
+        console.log("接收完毕，下载文件");
 
-        // 关闭连接
-        channel.close();
+        cb(name, buf.buffer);
+        // downloadBlob(name, [buf.buffer]);
       }
     };
   };
 }
 
 // 下载文件
-function downloadBlob(name: string, buffer: BlobPart[]) {
+export function downloadBlob(name: string, buffer: BlobPart[]) {
   const received = new Blob(buffer);
 
   const downloadAnchor = document.createElement("a");

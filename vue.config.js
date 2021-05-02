@@ -8,13 +8,13 @@ module.exports = {
   crossorigin: "anonymous",
   productionSourceMap: isDev,
   devServer: {
-    proxy: {
-      "/socket.io": {
-        target: "http://localhost:8080",
-        // pathRewrite: { "^/api": "" },
-        changeOrigin: true,
-      },
-    },
+    // proxy: {
+    //   "/socket.io": {
+    //     target: "http://localhost:8080",
+    //     // pathRewrite: { "^/api": "" },
+    //     changeOrigin: true,
+    //   },
+    // },
   },
   css: {
     loaderOptions: {
