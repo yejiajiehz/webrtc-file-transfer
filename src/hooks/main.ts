@@ -2,10 +2,10 @@ import { createSocket } from "./socket";
 import {
   createPeerConnection,
   createIceConn,
-} from "./rtc/createPeerConnection";
-import { createChannel } from "./rtc/createChannel";
-import { send } from "./file/send";
-import { receive } from "./file/receive";
+} from "./src/hooks/rtc/createPeerConnection";
+import { createChannel } from "./src/hooks/rtc/createChannel";
+import { send } from "./src/hooks/file/send";
+import { receive } from "./src/hooks/file/receive";
 
 // socket 提供消息交互服务。
 const { socket, sendMessage } = createSocket("roomid", () => {

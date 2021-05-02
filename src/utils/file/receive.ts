@@ -18,7 +18,7 @@ export function receive(peerConn: RTCPeerConnection) {
         return;
       }
 
-      var data = new Uint8ClampedArray(event.data);
+      const data = new Uint8ClampedArray(event.data);
       buf.set(data, count);
 
       count += data.byteLength;

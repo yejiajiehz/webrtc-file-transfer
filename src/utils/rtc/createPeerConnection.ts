@@ -1,5 +1,5 @@
 export function createPeerConnection(
-  config: RTCConfiguration,
+  config: RTCConfiguration | undefined,
   sendMessage: (mssage: any) => void
 ) {
   const peerConn = new RTCPeerConnection(config);

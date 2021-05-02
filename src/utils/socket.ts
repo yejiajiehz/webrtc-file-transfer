@@ -6,7 +6,7 @@ export function createSocket(
   // onmessage: Function
 ) {
   // 连接本地服务器
-  var socket = io();
+  const socket = io();
 
   // 用户加入房间
   socket.on("joined", function (room, clientId) {
