@@ -3,82 +3,63 @@
 import * as os from "os";
 import * as nodeStatic from "node-static";
 import * as http from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
-var fileServer = new nodeStatic.Server();
-var app = http
+const fileServer = new nodeStatic.Server();
+const app = http
   .createServer(function (req, res) {
     fileServer.serve(req, res);
   })
   .listen(8080);
 
-var io = new Server(app, {
+const io = new Server(app, {
   cors: {
     origin: "http://localhost:8081",
   },
 });
 
-io.sockets.on("connection", function (socket) {
-  // convenience function to log server messages on the client
-  // function log() {
-  //   var array = ["Message from server:"];
-  //   array.push.apply(array, arguments);
-  //   socket.emit("log", array);
-  //   console.log(arguments);
-  // }
+const broadcastRoom = (socket: Socket, room: string) => {
+  const clientsInRoom = io.sockets.adapter.rooms.get(room);
+  const inRoom = room && clientsInRoom?.has(socket.id);
 
-  socket.on("message", function (message) {
-    if (message) {
-      console.log("Client said: ", message);
+  return (ev: string, ...args: any[]) => {
+    if (inRoom) {
+      if (args[0]?.type) {
+        console.log("Client " + socket.id + " said: ", args[0]?.type);
+      }
+      socket.to(room).emit(ev, ...args);
     }
-    // for a real app, would be room-only (not broadcast)
-    socket.broadcast.emit("message", message);
+  };
+};
+
+io.sockets.on("connection", function (socket) {
+  socket.on("message", function (message, room) {
+    broadcastRoom(socket, room)("message", message);
   });
 
   socket.on("join", function (room) {
-    // console.log("Received request to create or join room " + room);
-
-    // console.log(io.sockets.adapter.rooms);
-
-    // console.log("Room " + room + " now has " + numClients + " client(s)");
-
-    // 加入房间，默认
+    // 加入房间
     socket.join(room);
 
-    var clientsInRoom = io.sockets.adapter.rooms.get(room);
+    const clientsInRoom = io.sockets.adapter.rooms.get(room);
+    const numClients = clientsInRoom ? clientsInRoom.size : 0;
 
-    var numClients = clientsInRoom ? clientsInRoom.size : 0;
-
-    console.log(
-      "Client ID " + socket.id + " join room " + room,
-      `房间人数：${numClients}`
-      // [Array.from(clientsInRoom?.values() || [])]
-    );
+    console.log("client " + socket.id + " join " + room, clientsInRoom);
 
     if (numClients === 1) {
+      console.log("created");
       socket.emit("created", room);
-    }
-
-    if (numClients === 2) {
-      // } else if (numClients === 1) {
-      // } else {
-      // console.log("Client ID " + socket.id + " joined room " + room);
-      // // io.sockets.in(room).emit('join', room);
-      // socket.join(room);
-      // socket.emit("joined", room, socket.id);
-      // io.sockets.in(room).emit("ready", room);
+    } else if (numClients === 2) {
+      console.log("ready");
       socket.broadcast.emit("ready", room);
-      // }
+    } else {
+      console.log(numClients, clientsInRoom);
     }
-    // } else {
-    //   // max two clients
-    //   socket.emit("full", room);
-    // }
   });
 
   socket.on("ipaddr", function () {
-    var ifaces = os.networkInterfaces();
-    for (var dev in ifaces) {
+    const ifaces = os.networkInterfaces();
+    for (const dev in ifaces) {
       ifaces[dev]?.forEach(function (details) {
         if (details.family === "IPv4" && details.address !== "127.0.0.1") {
           socket.emit("ipaddr", details.address);
@@ -87,12 +68,18 @@ io.sockets.on("connection", function (socket) {
     }
   });
 
-  // socket.on("disconnect", function (reason) {
-  //   console.log(`Peer or server disconnected. Reason: ${reason}.`);
-  //   socket.emit("bye");
-  // });
+  socket.on("disconnect", function (reason) {
+    // console.log(`Peer or server disconnected. Reason: ${reason}.`);
+    socket.broadcast.emit("bye");
+  });
 
-  // socket.on("bye", function (room) {
-  //   console.log(`Peer said bye on room ${room}.`);
-  // });
+  socket.on("bye", function (room) {
+    console.log(`Peer said bye on room ${room}.`);
+    // socket.broadcast.emit("bye");
+  });
+
+  socket.on("conn", function (room) {
+    console.log(socket.id + ": conn");
+    broadcastRoom(socket, room)("conn");
+  });
 });
