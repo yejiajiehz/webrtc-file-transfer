@@ -1,239 +1,145 @@
 import "./style.less";
 
-import {
-  computed,
-  defineComponent,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from "vue";
-import { Button, message, Spin } from "@gaoding/gd-antd-plus";
+import { defineComponent, ref, watch } from "vue";
+import { Button, message, Modal } from "@gaoding/gd-antd-plus";
 
-import { Upload } from "@/components/Upload";
-
-import { createSocket } from "@/utils/socket";
+import { getSocket } from "@/utils/socket";
 import {
-  createPeerConnection,
   handleIceConnMessage,
   sendOffer,
 } from "@/utils/rtc/createPeerConnection";
 
-import { createChannel } from "@/utils/rtc/createChannel";
-import { send } from "@/utils/file/send";
-import { downloadBlob, receive } from "@/utils/file/receive";
+import { downloadBlob, receive, send } from "@/utils/file";
+import { log } from "@/utils/log";
+import { useRTC } from "@/hooks/useRTC";
+
+import { ConnectBtn } from "./ConnectBtn";
 
 const HomePage = defineComponent({
   name: "home",
   setup() {
     const file = ref<File>();
+    const downloadInfo = ref<any>({});
+    const current = ref("");
 
-    // 发起方
-    const isInitiator = ref(false);
+    // 获取用户列表
+    const users = ref<string[]>([]);
 
-    const 人齐了 = ref(false);
-    const A建立连接 = ref(false);
-    const B建立连接 = ref(false);
-
-    const room = "米奇快乐屋";
     // socket 提供消息交互服务。
-    const { socket, sendMessage } = createSocket(room);
-
-    // 如果是创建房间，认为是发起方
-    socket.on("created", () => {
-      isInitiator.value = true;
-      console.log("创建房间成功。我是房主 A");
+    const socket = getSocket();
+    socket.on("P2P:join", function (userid: string) {
+      current.value = userid;
     });
 
-    socket.on("ready", () => {
-      console.log("ready");
-      // TODO: 考虑一方退出，重新加入的情况。如何处理房主？？
-      isInitiator.value = true;
-
-      人齐了.value = true;
+    socket.on("P2P:user-list", function (userlist: string[]) {
+      users.value = userlist.filter((u) => u !== current.value);
     });
 
-    // 创建连接
-    socket.on("message", (message) => {
-      handleIceConnMessage(peerConn, message, sendMessage, () => {
-        if (isInitiator.value) {
-          A建立连接.value = true;
-          socket.emit("conn", room);
-        }
-      });
-    });
+    // B 接收 A 的问询
+    socket.on(
+      "P2P-B:receive-file",
+      function (room: string, userid: string, filename: string) {
+        Modal.confirm({
+          title: `是否接收来自 ${userid} 的 ${filename} ?`,
+          onOk() {
+            // B 确定问询
+            socket.emit("P2P-A:receive-file", room, userid);
 
-    socket.on("conn", () => {
-      if (isInitiator.value) {
-        B建立连接.value = true;
-      } else {
-        A建立连接.value = true;
-      }
-    });
+            // 获取下载信息
+            const { peerConn } = useRTC(room);
 
-    socket.on("bye", () => {
-      console.log("有人退出。。。");
-      人齐了.value = false;
-      A建立连接.value = false;
-      B建立连接.value = false;
-      建立连接.value = false;
+            peerConn.ondatachannel = (event) =>
+              receive(event, (name, count, buffer, done) => {
+                // TODO: 进度展示
+                downloadInfo.value = {
+                  name,
+                  count,
+                };
 
-      // 销毁 Conn 和 channel
-      peerConn.close();
-      channel.close();
-      isInitiator.value = false;
+                if (done && buffer) {
+                  downloadBlob(name, [buffer]);
+                }
+              });
 
-      ({ peerConn, channel } = init());
-    });
-
-    onMounted(() => {
-      socket.open();
-    });
-
-    onUnmounted(() => {
-      socket.emit("bye", room);
-      socket.close();
-    });
-
-    function init() {
-      const configuration = undefined;
-
-      const peerConn = createPeerConnection(
-        configuration,
-        (message) => sendMessage(message),
-        () => {
-          if (!isInitiator.value) {
-            B建立连接.value = true;
-            socket.emit("conn", room);
-          }
-        }
-      );
-
-      const channel: RTCDataChannel = createChannel(peerConn);
-
-      peerConn.onconnectionstatechange = function (ev) {
-        if (
-          this.connectionState === "connected" &&
-          channel.readyState === "open"
-        ) {
-          建立连接.value = true;
-          console.log("rtc peerConn 连接");
-        }
-      };
-
-      channel.onopen = function () {
-        建立连接.value = true;
-        // TODO: 某些情况下，channel 不正确
-        console.log("rtc channel 连接");
-        // TODO: 重连机制
-      };
-
-      return { peerConn, channel };
-    }
-
-    let { peerConn, channel } = init();
-
-    watch(人齐了, (v) => {
-      if (v) {
-        console.log("人齐了, 发 offer");
-        sendOffer(peerConn, sendMessage);
-      }
-    });
-
-    watch([A建立连接, B建立连接], ([a, b]) => {
-      if (a) {
-        console.log("A建立连接");
-      }
-      if (b) {
-        console.log("B建立连接");
-      }
-      if (a && b) {
-        console.log("A & B 建立连接");
-
-        // B 接收文件
-        receive(peerConn, (name, buff) => {
-          reciveInfo.value = { name, buff };
+            // 不想把 peerConn 暴露，所以分开调用
+            // TODO: 多次执行怎么办？
+            socket.on("P2P:ice-message", function (room, message) {
+              handleIceConnMessage(peerConn, room, message);
+            });
+          },
+          onCancel() {
+            // 不接受文件
+            socket.emit("P2P-A:refuse-file", userid);
+          },
         });
       }
+    );
+
+    // A 连接 ready
+    socket.on("P2P-A:ready", async function (room: string) {
+      // TODO: 如果已经存在连接，是否能够复用？
+      // 创建 rtc 连接
+      const { peerConn, channel } = useRTC(room, (state) => {
+        if (state === "open") {
+          send(channel, file.value!);
+          // TODO: 进度动画
+        }
+      });
+
+      // TODO: 多次执行怎么办？
+      socket.on("P2P:ice-message", function (room: string, message: any) {
+        handleIceConnMessage(peerConn, room, message);
+      });
+
+      await sendOffer(peerConn, room);
     });
 
-    // A 发送文件
-    function sendFile() {
-      if (!A建立连接.value) {
-        message.error("连接尚未建立");
-        return;
-      }
+    // B 拒绝接收文件
+    socket.on("P2P-A:refuse-file", function (userid: string) {
+      message.error(`用户 ${userid} 拒绝了发送文件请求！`);
+      // TODO: 是否要关闭弹窗？
+    });
 
-      if (file.value) {
-        send(channel, file.value);
-      }
-    }
+    socket.on("P2P:exit", (userid: string) => {
+      log(`用户 ${userid} 退出!`);
 
-    const reciveInfo = ref<{ name: string; buff: ArrayBuffer }>();
+      // 销毁 Conn 和 channel
+      // if (peerConn) peerConn.close();
+      // if (channel) channel.close();
 
-    const 建立连接 = ref(false); //computed(() => A建立连接.value && B建立连接.value);
+      // TODO: 重试机制
+    });
+
+    // A 向 B 发起接收文件问询
+    const onConnect = (userid: string, f: File) => {
+      file.value = f;
+
+      socket.emit("P2P-B:receive-file", userid, f.name);
+
+      // TODO: loading 状态
+      // TODO: 超时机制，提示用户，并关闭弹窗？
+    };
 
     return {
-      join: () => socket.emit("join", room),
-      file,
-      reciveInfo,
-      sendFile,
-      创建房间: isInitiator,
-      建立连接,
+      current,
+      users,
+      onConnect,
+      downloadInfo,
     };
   },
   render() {
-    const 我是发送方 = this.创建房间;
-
     return (
       <div class="home-page">
-        {!this.建立连接 && <Button onClick={this.join}>建立连接</Button>}
+        <div> {this.current}</div>
+        <ConnectBtn users={this.users} onConnect={this.onConnect} />
 
-        {this.建立连接 ? (
-          <div>
-            {我是发送方 ? (
-              <div>
-                <h1>上传区域</h1>
-                <Upload onChange={(files) => (this.file = files[0])}>
-                  选择文件
-                </Upload>
-                {this.file && (
-                  <div>
-                    fileifo: {this.file.name} {this.file.size}
-                  </div>
-                )}
-                <Button onClick={this.sendFile}>发送</Button>
-              </div>
-            ) : (
-              <div>
-                <h1>下载区域</h1>
-                {this.reciveInfo && (
-                  <Button
-                    onClick={() =>
-                      downloadBlob(this.reciveInfo!.name, [
-                        this.reciveInfo!.buff,
-                      ])
-                    }
-                  >
-                    下载文件: {this.reciveInfo.name}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <Spin spinning={!this.建立连接}></Spin>
-        )}
+        <div>
+          {this.downloadInfo.name}
+          {this.downloadInfo.count}
+        </div>
       </div>
     );
   },
 });
 
 export default HomePage;
-
-/**
- * 1. A 创建房间，created
- * 2. B 加入房间，ready
- * 3. A, B 连接成功，conn
- * 4. A, B 退出，回到初始状态
- */

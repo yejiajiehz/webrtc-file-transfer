@@ -1,20 +1,14 @@
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
+import { log } from "./log";
 
-export function createSocket(room: string) {
-  // 连接本地服务器
-  const socket = io("http://localhost:8080");
+let socket: Socket;
+export function getSocket() {
+  if (!socket) {
+    // 连接本地服务器
+    socket = io("http://localhost:8080");
 
-  // 获取 ip 地址
-  // TODO: 打洞？
-  socket.on("ipaddr", function (ipaddr) {
-    console.log("Server IP address is: " + ipaddr);
-    // updateRoomURL(ipaddr);
-  });
+    socket.emit("P2P:join");
+  }
 
-  return {
-    socket,
-    sendMessage(message: any) {
-      socket.emit("message", message, room);
-    },
-  };
+  return socket;
 }
