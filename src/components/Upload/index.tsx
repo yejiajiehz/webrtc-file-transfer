@@ -32,6 +32,7 @@ export const Upload = defineComponent({
           onChange={(e) => {
             const { files } = e.target as HTMLInputElement;
             this.onChange?.(files ? [...files] : []);
+            (this.$refs.fileInputRef as any).value = null;
           }}
           {...custompProps}
         />

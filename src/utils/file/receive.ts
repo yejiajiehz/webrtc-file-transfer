@@ -5,6 +5,7 @@ export function receive(
   event: RTCDataChannelEvent,
   onChunk: (
     name: string,
+    size: number,
     count: number,
     buffer?: ArrayBufferLike,
     done?: boolean
@@ -12,8 +13,8 @@ export function receive(
 ) {
   const channel = event.channel;
 
-  let buf: Uint8ClampedArray;
-  let name = "";
+  let buf: Uint8ClampedArray | null;
+  let file: { name: string; size: number };
 
   let count = 0;
 
@@ -22,13 +23,18 @@ export function receive(
 
     // 第一条信息，接收文件大小
     if (typeof event.data === "string") {
-      const file = JSON.parse(event.data);
-      name = file.name;
-      buf = new Uint8ClampedArray(file.byteLength);
+      file = JSON.parse(event.data);
+      try {
+        buf = new Uint8ClampedArray(file.size);
+      } catch (e) {
+        buf = null;
+      }
       count = 0;
-      onChunk(name, count);
+      onChunk(file.name, file.size, count);
       return;
     }
+
+    if (buf === null) return;
 
     const data = new Uint8ClampedArray(event.data);
     buf.set(data, count);
@@ -36,7 +42,7 @@ export function receive(
 
     const done = count === buf.byteLength;
 
-    onChunk(name, count, buf, done);
+    onChunk(file.name, file.size, count, buf, done);
 
     // 完成接收
     if (done) {

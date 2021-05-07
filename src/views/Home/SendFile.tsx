@@ -1,36 +1,44 @@
 import "./style.less";
 
 import { defineComponent, PropType, ref } from "vue";
-import { Button, message, Modal } from "@gaoding/gd-antd-plus";
+import { Button, Modal, Spin } from "@gaoding/gd-antd-plus";
 
 import { Upload } from "@/components/Upload";
 
-export const ConnectBtn = defineComponent({
-  name: "home",
+type User = {
+  id: string;
+  loading: boolean;
+};
+
+export const SendFile = defineComponent({
+  name: "SendFile",
   props: {
-    onConnect: {
+    onFileChange: {
       type: Function as PropType<(userid: string, file: File) => void>,
       required: true,
     },
     users: {
-      type: Array as PropType<string[]>,
+      type: Array as PropType<User[]>,
       required: true,
     },
   },
   setup() {
     const visible = ref(false);
-    // const file = ref<File>();
 
     return {
       visible,
-      // file,
     };
   },
   render() {
-    // const
     return (
-      <div class="home-page">
-        <Button onClick={() => (this.visible = true)}>隔空投送</Button>
+      <div>
+        <Button
+          onClick={() => {
+            this.visible = true;
+          }}
+        >
+          隔空投送
+        </Button>
 
         <Modal
           visible={this.visible}
@@ -44,10 +52,10 @@ export const ConnectBtn = defineComponent({
           {this.users.map((user) => (
             <Upload
               onChange={(files) => {
-                this.onConnect(user, files[0]);
+                this.onFileChange(user.id, files[0]);
               }}
             >
-              <div>{user}</div>
+              <Spin spinning={user.loading}>{user.id}</Spin>
             </Upload>
           ))}
         </Modal>

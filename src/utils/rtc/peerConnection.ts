@@ -3,14 +3,14 @@ import { getSocket } from "@/utils/socket";
 
 export function createPeerConnection(
   config: RTCConfiguration | undefined,
-  room: string
+  userid: string
 ) {
   const peerConn = new RTCPeerConnection(config);
   const socket = getSocket();
 
   peerConn.onicecandidate = function (event) {
     if (event.candidate) {
-      socket.emit("P2P:ice-message", room, {
+      socket.emit("P2P:ice-message", userid, {
         type: "candidate",
         data: event.candidate.toJSON(),
       });
@@ -22,19 +22,19 @@ export function createPeerConnection(
 }
 
 // 发送 offer
-export async function sendOffer(peerConn: RTCPeerConnection, room: string) {
+export async function sendOffer(peerConn: RTCPeerConnection, userid: string) {
   const offer = await peerConn.createOffer();
   log("A.1 发送 offer 信令（SDP）", Date.now());
   await peerConn.setLocalDescription(offer);
 
   const sokcet = getSocket();
-  sokcet.emit("P2P:ice-message", room, peerConn.localDescription);
+  sokcet.emit("P2P:ice-message", userid, peerConn.localDescription);
 }
 
 // 消息处理
 export async function handleIceConnMessage(
   peerConn: RTCPeerConnection,
-  room: string,
+  userid: string,
   message: any
 ) {
   if (!message) return;
@@ -44,7 +44,7 @@ export async function handleIceConnMessage(
     const desc = await peerConn.createAnswer();
     await peerConn.setLocalDescription(desc);
     const socket = getSocket();
-    socket.emit("P2P:ice-message", room, peerConn.localDescription);
+    socket.emit("P2P:ice-message", userid, peerConn.localDescription);
     log("B.2 接收 offer，生成 Answer 信令（SDP）, 返回给发起端", Date.now());
   } else if (message.type === "answer") {
     log("A.3 获取 answer", Date.now());

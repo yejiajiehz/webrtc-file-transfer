@@ -1,5 +1,4 @@
 import io, { Socket } from "socket.io-client";
-import { log } from "./log";
 
 let socket: Socket;
 export function getSocket() {
@@ -11,4 +10,16 @@ export function getSocket() {
   }
 
   return socket;
+}
+
+export function bindOnce(
+  socket: Socket,
+  event: string,
+  listener: (...args: any[]) => void
+) {
+  // 避免重复绑定
+  if (!socket.hasListeners(event)) {
+    socket.on(event, listener);
+  }
+  return () => socket.off(event, listener);
 }
