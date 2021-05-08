@@ -178,7 +178,7 @@ export function useRTC() {
         socket.emit("P2P-B2A:receive-file-complate", userid);
         message.success("接收文件成功！");
 
-        downloadBlob(name, [buffer]);
+        downloadBlob(name, buffer);
         handlerClear();
       }
     });
