@@ -43,6 +43,10 @@ io.sockets.on("connection", function (socket) {
   bindMessage("P2P-B2A:answer-receive-file");
   // 接收文件完毕
   bindMessage("P2P-B2A:receive-file-complate");
-
+  // 取消传输
+  bindMessage("P2P:cancel-transfer");
+  // 断点续传
+  bindMessage("P2P:file-check");
+  // webrtc ice 协商
   bindMessage("P2P:ice-message");
 });

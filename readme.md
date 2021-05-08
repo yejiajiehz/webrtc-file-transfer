@@ -4,7 +4,7 @@
 
 ## 使用方法
 
-1. 启动  server
+1. 启动 server
 ```
 cd server
 npm i

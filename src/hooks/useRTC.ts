@@ -2,7 +2,13 @@
 import { message, Modal } from "@gaoding/gd-antd-plus";
 
 import { reactive, ref } from "vue";
-import { receive, downloadBlob, send } from "@/utils/file";
+import {
+  receive,
+  downloadBlob,
+  sendFileInfo,
+  sendFileContent,
+  CHUNK_SIZE,
+} from "@/utils/file";
 import { log } from "@/utils/log";
 import {
   createPeerConnection,
@@ -12,21 +18,24 @@ import {
 } from "@/utils/rtc";
 import { getSocket } from "@/utils/socket";
 import { useLoading } from "./useLoading";
+import fileSize from "filesize";
 
 // 确认的时间
 const CONFIRM_TIME = 10 * 1000;
 // RTC 连接时间
 const RTC_CONN_TIME = 5 * 1000;
 
+type Transfer = {
+  file: File | { name: string; size: number };
+  state: "wait" | "check" | "transfering" | "cancel";
+  transfered: number;
+};
+
 export function useRTC() {
   // 传输信息
-  const transfer = reactive<{
-    file: File | { name: string; size: number };
-    transfering: boolean;
-    transfered: number;
-  }>({
+  const transfer = reactive<Transfer>({
     file: { name: "", size: 0 },
-    transfering: false,
+    state: "wait",
     transfered: 0,
   });
 
@@ -54,15 +63,15 @@ export function useRTC() {
       setLoading(userid, false);
     }, CONFIRM_TIME);
 
-    socket.emit("P2P-A2B:ask-receive-file", userid, file.name);
+    socket.emit("P2P-A2B:ask-receive-file", userid, file.name, file.size);
   };
 
   // 2. B 处理 A 的发送文件请求
   socket.on(
     "P2P-A2B:ask-receive-file",
-    function (userid: string, filename: string) {
+    function (userid: string, filename: string, size: number) {
       const modal = Modal.confirm({
-        title: `是否接收来自 ${userid} 的 ${filename} ?`,
+        title: `是否接收来自 ${userid} 的 ${filename}(${fileSize(size)}) ?`,
         onOk: () => {
           clearTimeout(confirmTimeid);
           confirmReceiveFile(userid);
@@ -77,7 +86,7 @@ export function useRTC() {
       confirmTimeid = setTimeout(() => {
         modal.destroy();
         message.warning("长时间未确认，已经断开连接！");
-      }, CONFIRM_TIME - 500);
+      }, CONFIRM_TIME);
     }
   );
 
@@ -132,7 +141,6 @@ export function useRTC() {
     };
 
     // 异常处理：rtc 连接不成功
-    // TODO: 时常连接不上，考虑自动重试？
     rtcConnTimeid = setTimeout(() => {
       message.error("连接不成功，请重试！");
     }, RTC_CONN_TIME);
@@ -156,20 +164,34 @@ export function useRTC() {
 
   // 5. A 发送文件
   function sendFile() {
-    transfer.transfering = true;
-    // 发送文件
-    send(channel!, transfer.file as File, (chunk) => {
-      // 传送速率
-      transfer.transfered += chunk.byteLength;
-    });
+    transfer.state = "check";
+
+    // 发送文件信息
+    sendFileInfo(channel!, transfer.file as File);
   }
 
-  // 6. B 接收文件
+  // 6. A 判断文件状态，断点续传
+  socket.on("P2P:file-check", function (userid: string, offset: number) {
+    transfer.state = "transfering";
+    transfer.transfered = offset * CHUNK_SIZE;
+
+    sendFileContent(channel!, transfer.file as File, offset, (chunk) => {
+      // 传送速率
+      const isTransfering = transfer.state === "transfering";
+      if (isTransfering) {
+        transfer.transfered += chunk.byteLength;
+      }
+
+      return isTransfering;
+    });
+  });
+
+  // 7. B 接收文件信息和内容
   function receiveFile(userid: string, event: RTCDataChannelEvent) {
-    transfer.transfering = true;
+    transfer.state = "transfering";
 
     // 接收文件
-    receive(event, (name, size, count, buffer, done) => {
+    receive(event, userid, (name, size, count, buffer, done) => {
       transfer.file = { name, size };
       transfer.transfered = count;
 
@@ -184,10 +206,16 @@ export function useRTC() {
     });
   }
 
-  // 7. A 收到 B 完成文件传送消息，关闭连接
+  // 8. A 收到 B 完成文件传送消息，关闭连接
   socket.on("P2P-B2A:receive-file-complate", function () {
     message.success("发送文件成功！");
     handlerClear();
+  });
+
+  // 取消传输
+  socket.on("P2P:cancel-transfer", function () {
+    message.error("对方取消了文件传输！");
+    transfer.state = "cancel";
   });
 
   // 退出
@@ -196,7 +224,7 @@ export function useRTC() {
 
     if (targetUser.value === userid) {
       // 在文件传输中退出，提示用户
-      if (transfer.transfering) {
+      if (transfer.state === "transfering") {
         message.error("断开连接，文件传输失败！");
         handlerClear();
       }
@@ -207,7 +235,7 @@ export function useRTC() {
 
   // 清理连接
   function handlerClear() {
-    transfer.transfering = false;
+    transfer.state = "wait";
     transfer.transfered = 0;
 
     if (peerConn) {
@@ -220,13 +248,14 @@ export function useRTC() {
     }
   }
 
-  // 暂停、取消方法
-  function abort() {
-    // TODO: abort
+  // 取消传输
+  function cancel() {
+    transfer.state = "cancel";
+    socket.emit("P2P:cancel-transfer", targetUser.value);
   }
 
   return {
-    abort,
+    cancel,
     getLoading,
     transfer,
     sendReceiveFileConfirm,

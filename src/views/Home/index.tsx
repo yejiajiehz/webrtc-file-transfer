@@ -12,7 +12,7 @@ import { SendFile } from "./SendFile";
 const HomePage = defineComponent({
   name: "home",
   setup() {
-    const { transfer, sendReceiveFileConfirm, getLoading } = useRTC();
+    const { transfer, sendReceiveFileConfirm, getLoading, cancel } = useRTC();
     const { currentUser, userList } = useUser();
 
     const users = computed(() =>
@@ -22,11 +22,15 @@ const HomePage = defineComponent({
       }))
     );
 
+    const showTransfer = computed(() => transfer.state === "transfering");
+
     return {
       currentUser,
       users,
       transfer,
+      showTransfer,
       sendReceiveFileConfirm,
+      cancel,
     };
   },
   render() {
@@ -38,9 +42,10 @@ const HomePage = defineComponent({
           onFileChange={this.sendReceiveFileConfirm}
         />
 
-        {this.transfer.transfering && (
+        {this.showTransfer && (
           <FileTransfer
             file={this.transfer.file!}
+            cancel={this.cancel}
             transferred={this.transfer.transfered}
           />
         )}

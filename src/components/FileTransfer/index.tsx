@@ -1,25 +1,46 @@
-import { Progress } from "@gaoding/gd-antd-plus";
+import { useSpeed } from "@/hooks/useSpeed";
+import { Progress, Button, Popconfirm } from "@gaoding/gd-antd-plus";
+import { defineComponent, PropType } from "vue";
 import fileSize from "filesize";
 
-const FileTransfer = (props: {
-  file: {
-    name: string;
-    size: number;
-  };
+const FileTransfer = defineComponent({
+  props: {
+    file: {
+      type: Object as PropType<{ name: string; size: number }>,
+      required: true,
+    },
+    transferred: { type: Number, required: true },
+    cancel: { type: Function, required: true },
+  },
+  setup(props) {
+    const speed = useSpeed(props, "transferred");
 
-  transferred: number;
-}) => {
-  const { name, size } = props.file;
-  const percent = ((props.transferred * 100) / size).toFixed(2);
+    return {
+      speed,
+    };
+  },
+  render() {
+    const { transferred } = this;
+    const { name, size } = this.file;
+    const downloadTime = Math.ceil((size - transferred) / this.speed / 60);
+    const percent = ((transferred * 100) / size).toFixed(2);
 
-  return (
-    <div>
+    return (
       <div>
-        {name}: {fileSize(size)}
+        <ul>
+          <li>文件：{name}</li>
+          <li>大小：{fileSize(size)}</li>
+          <li>传输速度：{fileSize(this.speed)}/S</li>
+          <li> 预计还需要： {downloadTime} 分钟</li>
+        </ul>
+        <Progress percent={+percent} />
+
+        <Popconfirm title="确定取消传输？" onConfirm={() => this.cancel()}>
+          <Button>取消</Button>
+        </Popconfirm>
       </div>
-      <Progress percent={+percent} />
-    </div>
-  );
-};
+    );
+  },
+});
 
 export { FileTransfer };

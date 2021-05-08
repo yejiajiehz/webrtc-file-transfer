@@ -1,9 +1,12 @@
 import "./style.less";
 
 import { defineComponent, PropType, ref } from "vue";
-import { Button, Modal, Spin } from "@gaoding/gd-antd-plus";
+import { Button, message, Spin } from "@gaoding/gd-antd-plus";
 
 import { Upload } from "@/components/Upload";
+import fileSize from "filesize";
+import Card from "@gaoding/gd-antd-plus/lib/card/Card";
+import { FILE_SIZE_LIMIT } from "@/utils/file";
 
 type User = {
   id: string;
@@ -40,25 +43,26 @@ export const SendFile = defineComponent({
           隔空投送
         </Button>
 
-        <Modal
-          visible={this.visible}
-          onCancel={() => {
-            this.visible = false;
-          }}
-          onOk={() => {
-            this.visible = false;
-          }}
-        >
-          {this.users.map((user) => (
-            <Upload
-              onChange={(files) => {
-                this.onFileChange(user.id, files[0]);
-              }}
-            >
-              <Spin spinning={user.loading}>{user.id}</Spin>
-            </Upload>
-          ))}
-        </Modal>
+        {this.visible && (
+          <Card>
+            {this.users.map((user) => (
+              <Upload
+                onChange={(files) => {
+                  const file = files[0];
+                  if (file.size > FILE_SIZE_LIMIT) {
+                    message.error(
+                      "发送的文件必须小于 " + fileSize(FILE_SIZE_LIMIT)
+                    );
+                    return;
+                  }
+                  this.onFileChange(user.id, file);
+                }}
+              >
+                <Spin spinning={user.loading}>{user.id}</Spin>
+              </Upload>
+            ))}
+          </Card>
+        )}
       </div>
     );
   },
