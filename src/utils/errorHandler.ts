@@ -1,4 +1,4 @@
-import { message } from "@gaoding/gd-antd-plus";
+import { message } from "ant-design-vue";
 
 export function catchGlobalPromiseError() {
   window.addEventListener("unhandledrejection", (event) => {

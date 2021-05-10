@@ -1,5 +1,5 @@
 import { useSpeed } from "@/hooks/useSpeed";
-import { Progress, Button, Popconfirm } from "@gaoding/gd-antd-plus";
+import { Progress, Button, Popconfirm } from "ant-design-vue";
 import { defineComponent, PropType } from "vue";
 import fileSize from "filesize";
 

@@ -1,5 +1,6 @@
-import { getChildren } from "@/utils/props";
 import { defineComponent, PropType } from "vue";
+
+import { getChildren } from "@/utils/props";
 
 export const Upload = defineComponent({
   name: "Upload",

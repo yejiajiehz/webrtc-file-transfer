@@ -37,7 +37,7 @@ const HomePage = defineComponent({
   render() {
     return (
       <div class="home-page">
-        <div>{this.currentUser}</div>
+        <div>当前用户：{this.currentUser}</div>
         <SendFile
           users={this.users}
           onRefresh={this.refreshUserList}

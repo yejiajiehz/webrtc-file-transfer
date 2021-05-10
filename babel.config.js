@@ -4,11 +4,10 @@ module.exports = {
     [
       "import",
       {
-        libraryName: "@gaoding/gd-antd-plus",
+        libraryName: "ant-design-vue",
         libraryDirectory: "es",
         style: true,
       },
-      "@gaoding/gd-antd-plus",
     ],
   ],
 };

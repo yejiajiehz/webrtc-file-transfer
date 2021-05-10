@@ -1,5 +1,5 @@
 {
-  "name": "kc-front",
+  "name": "webrtc-flie-transfer",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,33 +9,19 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "socket.io-client": "^4.0.1",
-    "@ant-design/icons-vue": "^6.0.1",
-    "@gaoding/auth": "^4.3.4",
-    "@gaoding/gd-antd-plus": "^1.0.0-beta.6",
-    "@gaoding/gd-tracker": "^1.6.3",
-    "@gaoding/oauth2-client": "^1.9.9-beta",
-    "@gaoding/user-device-id": "^0.4.2",
-    "@sentry/browser": "^6.3.0",
-    "ali-oss": "^6.15.0",
-    "axios": "^0.21.1",
+    "ant-design-vue": "^2.1.4",
     "classnames": "^2.3.1",
-    "core-js": "^3.6.5",
-    "dayjs": "^1.10.4",
     "filesize": "^6.1.0",
-    "js-cookie": "^2.2.1",
     "lodash": "^4.17.21",
+    "socket.io-client": "^4.0.1",
     "vue": "^3.0.0",
-    "vue-class-component": "^8.0.0-0",
     "vue-request": "^1.1.0",
     "vue-router": "^4.0.0-0",
     "vuex": "^4.0.0-0"
   },
   "devDependencies": {
-    "@types/ali-oss": "^6.0.8",
     "@types/jest": "^24.0.19",
     "@types/lodash": "^4.14.168",
-    "@types/uuid": "^8.3.0",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
     "@typescript-eslint/parser": "^4.18.0",
     "@vue/cli-plugin-babel": "~4.5.0",

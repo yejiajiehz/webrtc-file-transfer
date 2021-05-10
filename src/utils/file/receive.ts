@@ -41,8 +41,6 @@ export function receive(
     if (typeof event.data === "string") {
       file = JSON.parse(event.data);
 
-      console.log(file, bufferMap);
-
       const key = file.name + "_" + file.size;
       buf = bufferMap[key] || (bufferMap[key] = []);
       count = buf.reduce((v, b) => v + b.byteLength, 0);

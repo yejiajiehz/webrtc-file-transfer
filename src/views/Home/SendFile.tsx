@@ -1,11 +1,9 @@
 import "./style.less";
 
 import { defineComponent, PropType, ref } from "vue";
-import { Button, message, Spin } from "@gaoding/gd-antd-plus";
+import { Button, message, Spin, Card, Upload } from "ant-design-vue";
 
-import { Upload } from "@/components/Upload";
 import fileSize from "filesize";
-import Card from "@gaoding/gd-antd-plus/lib/card/Card";
 import { FILE_SIZE_LIMIT } from "@/utils/file";
 
 type User = {
@@ -44,27 +42,30 @@ export const SendFile = defineComponent({
             this.visible = true;
           }}
         >
-          隔空投送
+          传输文件
         </Button>
 
         {this.visible && (
           <Card>
             <div class="user-list">
               {this.users.map((user) => (
-                <Upload
-                  onChange={(files) => {
-                    const file = files[0];
-                    if (file.size > FILE_SIZE_LIMIT) {
-                      message.error(
-                        "发送的文件必须小于 " + fileSize(FILE_SIZE_LIMIT)
-                      );
-                      return;
-                    }
-                    this.onFileChange(user.id, file);
-                  }}
-                >
-                  <Spin spinning={user.loading}>{user.id}</Spin>
-                </Upload>
+                <div>
+                  <Upload
+                    showUploadList={false}
+                    beforeUpload={(file: File) => {
+                      if (file.size > FILE_SIZE_LIMIT) {
+                        message.error(
+                          "发送的文件必须小于 " + fileSize(FILE_SIZE_LIMIT)
+                        );
+                        return;
+                      }
+                      this.onFileChange(user.id, file);
+                      return false;
+                    }}
+                  >
+                    <Spin spinning={user.loading}>用户：{user.id}</Spin>
+                  </Upload>
+                </div>
               ))}
             </div>
             <Button onClick={this.onRefresh}>刷新</Button>

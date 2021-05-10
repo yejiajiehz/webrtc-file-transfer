@@ -1,5 +1,5 @@
 // TODO: 剥离 UI 组件
-import { message, Modal } from "@gaoding/gd-antd-plus";
+import { message, Modal } from "ant-design-vue";
 
 import { reactive, ref } from "vue";
 import {
