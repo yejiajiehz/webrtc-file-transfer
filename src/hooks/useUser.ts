@@ -16,5 +16,9 @@ export function useUser() {
     userList.value = userlist.filter((u) => u !== currentUser.value);
   });
 
-  return { currentUser, userList };
+  const refresh = () => {
+    socket.emit("P2P:user-list");
+  };
+
+  return { currentUser, userList, refresh };
 }

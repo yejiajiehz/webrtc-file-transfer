@@ -13,7 +13,7 @@ const HomePage = defineComponent({
   name: "home",
   setup() {
     const { transfer, sendReceiveFileConfirm, getLoading, cancel } = useRTC();
-    const { currentUser, userList } = useUser();
+    const { currentUser, userList, refresh: refreshUserList } = useUser();
 
     const users = computed(() =>
       userList.value.map((user) => ({
@@ -31,6 +31,7 @@ const HomePage = defineComponent({
       showTransfer,
       sendReceiveFileConfirm,
       cancel,
+      refreshUserList,
     };
   },
   render() {
@@ -39,6 +40,7 @@ const HomePage = defineComponent({
         <div>{this.currentUser}</div>
         <SendFile
           users={this.users}
+          onRefresh={this.refreshUserList}
           onFileChange={this.sendReceiveFileConfirm}
         />
 

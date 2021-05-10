@@ -20,6 +20,10 @@ export const SendFile = defineComponent({
       type: Function as PropType<(userid: string, file: File) => void>,
       required: true,
     },
+    onRefresh: {
+      type: Function as PropType<() => void>,
+      required: true,
+    },
     users: {
       type: Array as PropType<User[]>,
       required: true,
@@ -45,22 +49,25 @@ export const SendFile = defineComponent({
 
         {this.visible && (
           <Card>
-            {this.users.map((user) => (
-              <Upload
-                onChange={(files) => {
-                  const file = files[0];
-                  if (file.size > FILE_SIZE_LIMIT) {
-                    message.error(
-                      "发送的文件必须小于 " + fileSize(FILE_SIZE_LIMIT)
-                    );
-                    return;
-                  }
-                  this.onFileChange(user.id, file);
-                }}
-              >
-                <Spin spinning={user.loading}>{user.id}</Spin>
-              </Upload>
-            ))}
+            <div class="user-list">
+              {this.users.map((user) => (
+                <Upload
+                  onChange={(files) => {
+                    const file = files[0];
+                    if (file.size > FILE_SIZE_LIMIT) {
+                      message.error(
+                        "发送的文件必须小于 " + fileSize(FILE_SIZE_LIMIT)
+                      );
+                      return;
+                    }
+                    this.onFileChange(user.id, file);
+                  }}
+                >
+                  <Spin spinning={user.loading}>{user.id}</Spin>
+                </Upload>
+              ))}
+            </div>
+            <Button onClick={this.onRefresh}>刷新</Button>
           </Card>
         )}
       </div>

@@ -31,6 +31,10 @@ io.sockets.on("connection", function (socket) {
     emitUsers();
   });
 
+  socket.on("P2P:user-list", function () {
+    emitUsers();
+  });
+
   function bindMessage(event: string) {
     socket.on(event, function (userid: string, ...args) {
       socket.to(userid).emit(event, socket.id, ...args);
