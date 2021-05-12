@@ -32,3 +32,4 @@ npm run serve
 2. [WebRTC 总结](https://ejin66.github.io/2018/09/03/webrtc-summary.html)
 3. [WebRTC中的信令和内网穿透技术 STUN / TURN](https://blog.csdn.net/shaosunrise/article/details/83627828)
 5. [A quick cheatsheet for socket.io](https://gist.github.com/alexpchin/3f257d0bb813e2c8c476)
+6. [sharedrop](https://github.com/szimek/sharedrop)

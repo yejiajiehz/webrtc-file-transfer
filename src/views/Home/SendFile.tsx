@@ -1,15 +1,10 @@
 import "./style.less";
 
 import { defineComponent, PropType, ref } from "vue";
-import { Button, message, Spin, Card, Upload } from "ant-design-vue";
+import { Button, message, Card, Upload } from "ant-design-vue";
 
 import fileSize from "filesize";
 import { FILE_SIZE_LIMIT } from "@/utils/file";
-
-type User = {
-  id: string;
-  loading: boolean;
-};
 
 export const SendFile = defineComponent({
   name: "SendFile",
@@ -20,10 +15,10 @@ export const SendFile = defineComponent({
     },
     onRefresh: {
       type: Function as PropType<() => void>,
-      required: true,
+      // required: true,
     },
     users: {
-      type: Array as PropType<User[]>,
+      type: Array as PropType<string[]>,
       required: true,
     },
   },
@@ -59,11 +54,11 @@ export const SendFile = defineComponent({
                         );
                         return;
                       }
-                      this.onFileChange(user.id, file);
+                      this.onFileChange(user, file);
                       return false;
                     }}
                   >
-                    <Spin spinning={user.loading}>用户：{user.id}</Spin>
+                    用户：{user}
                   </Upload>
                 </div>
               ))}

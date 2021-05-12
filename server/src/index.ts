@@ -45,21 +45,23 @@ io.sockets.on("connection", function (socket) {
     });
   }
 
-  // A-> B 发送接收文件问询
-  bindMessage("P2P-A2B:ask-receive-file");
+  bindMessage("message");
 
-  // B -> A 回应接收文件
-  bindMessage("P2P-B2A:answer-receive-file");
+  // // A-> B 发送接收文件问询
+  // bindMessage("P2P-A2B:ask-receive-file");
 
-  // B -> A 断点续传
-  bindMessage("P2P:file-check");
+  // // B -> A 回应接收文件
+  // bindMessage("P2P-B2A:answer-receive-file");
 
-  // B -> 接收文件完毕
-  bindMessage("P2P-B2A:receive-file-complate");
+  // // B -> A 断点续传
+  // bindMessage("P2P:file-check");
 
-  // A <-> B 取消传输
-  bindMessage("P2P:cancel-transfer");
+  // // B -> 接收文件完毕
+  // bindMessage("P2P-B2A:receive-file-complate");
 
-  // A <-> B webrtc ice 协商
-  bindMessage("P2P:ice-message");
+  // // A <-> B 取消传输
+  // bindMessage("P2P:cancel-transfer");
+
+  // // A <-> B webrtc ice 协商
+  // bindMessage("P2P:ice-message");
 });
