@@ -1,4 +1,4 @@
-import { onUpdated, Ref, watch } from "vue";
+import { Ref, watch } from "vue";
 
 export function useStateChange<T>(
   state: Ref<T>,

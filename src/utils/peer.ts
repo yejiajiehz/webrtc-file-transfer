@@ -1,27 +1,28 @@
 import { log } from "@/utils/log";
 
 export class Peer {
-  emitMessage: (data: any) => void;
+  sendMessage: (data: any) => void;
   peerConn: RTCPeerConnection | null = null;
   channel: RTCDataChannel | null = null;
   connectionState: RTCPeerConnectionState = "new";
 
   constructor(
     config: RTCConfiguration | undefined,
-    emitMessage: (data: any) => void
+    sendMessage: (data: any) => void,
+    onConnectd?: () => void
   ) {
-    this.emitMessage = emitMessage;
-    this.startConnect(config);
+    this.sendMessage = sendMessage;
+    this.startConnect(config, onConnectd);
   }
 
-  startConnect(config?: RTCConfiguration) {
+  startConnect(config?: RTCConfiguration, onConnectd?: () => void) {
     const peerConn = new RTCPeerConnection(config);
     const channel = peerConn.createDataChannel("file");
     channel.binaryType = "arraybuffer";
 
     peerConn.onicecandidate = (event) => {
       if (event.candidate) {
-        this.emitMessage({
+        this.sendMessage({
           type: "candidate",
           data: event.candidate.toJSON(),
         });
@@ -31,6 +32,9 @@ export class Peer {
     peerConn.onsignalingstatechange = () => {
       log("peer: connectionState change:", this.connectionState);
       this.connectionState = peerConn.connectionState;
+      if (this.connectionState === "connected") {
+        onConnectd?.();
+      }
     };
 
     this.peerConn = peerConn;
@@ -44,7 +48,7 @@ export class Peer {
       const offer = await peerConn.createOffer();
       await peerConn.setLocalDescription(offer);
 
-      this.emitMessage(peerConn.localDescription);
+      this.sendMessage(peerConn.localDescription);
     }
   }
 
@@ -60,7 +64,7 @@ export class Peer {
       const desc = await peerConn.createAnswer();
       await peerConn.setLocalDescription(desc);
 
-      this.emitMessage(peerConn.localDescription);
+      this.sendMessage(peerConn.localDescription);
     } else if (message.type === "answer") {
       await peerConn.setRemoteDescription(new RTCSessionDescription(message));
     } else if (message.type === "candidate") {

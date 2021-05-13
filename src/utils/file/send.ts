@@ -13,29 +13,38 @@ export async function channelSend(
   send: (data: ArrayBuffer) => void,
   file: File,
   offset = 0,
-  onSendChunk?: (chunk: ArrayBuffer) => boolean
+  onSendChunk?: (chunk: ArrayBuffer, done?: boolean) => boolean
 ) {
   const { size } = file;
 
   async function channelSend(index = 0) {
-    if (index * CHUNK_SIZE >= size) {
-      log("完成发送");
-      return;
-    }
+    const start = index * CHUNK_SIZE;
+    const end = Math.min((index + 1) * CHUNK_SIZE, size);
 
-    const chunk = file.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
+    const chunk = file.slice(start, end);
     const buffer = await chunk.arrayBuffer();
 
-    send(buffer);
-    const transfering = onSendChunk?.(buffer);
+    const done = end === file.size;
+    const transfering = onSendChunk?.(buffer, done);
+    const canSend = transfering !== false;
 
-    log("发送文件内容", buffer);
+    if (canSend) {
+      if (buffer.byteLength) {
+        // log("发送文件内容", buffer);
+        send(buffer);
 
-    if (transfering) {
-      // XXX: 大文件场景下，释放主线程?
-      setTimeout(() => {
-        channelSend(index + 1);
-      });
+        // XXX: 大文件场景下，释放主线程?
+        setTimeout(() => {
+          channelSend(index + 1);
+        });
+      }
+    } else {
+      log("取消传输");
+    }
+
+    if (done) {
+      log("完成发送");
+      return;
     }
   }
 

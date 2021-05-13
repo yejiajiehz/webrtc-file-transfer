@@ -5,4 +5,4 @@
     <circle class="circle" cx="570" cy="570" r="300" stroke="rgba(160,160,160,.7)"></circle>
     <circle class="circle" cx="570" cy="570" r="400" stroke="rgba(160,160,160,.6)"></circle>
     <circle class="circle" cx="570" cy="570" r="500" stroke="rgba(160,160,160,.5)"></circle>
-  </svg>
+</svg>

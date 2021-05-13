@@ -1,121 +1,141 @@
-import { ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { downloadBlob, receive, channelSend } from "@/utils/file";
 
 import { useSocket } from "./useSocket";
 import { Peer } from "../utils/peer";
-
-// 确认的时间
-const CONFIRM_TIME = 10 * 1000;
-// RTC 连接时间
-const RTC_CONN_TIME = 5 * 1000;
+import { cache } from "@/utils/file/cache";
 
 export function useRTC() {
   let peer: Peer;
-
   const file = ref<File>();
 
   const {
-    emitMessage,
-    getCurrentUserId,
+    sendMessage,
+    getCurrentUser,
     userList,
-    targetUserId,
-    refresh,
+    targetUser,
+    refreshUserList,
     transferState,
-    fileinfo,
-    sendFileInfo,
-    receiveResponse,
-    // sendFileContent,
-    cancelFileTransfer,
+    fileInfo,
+    sendFileInfo: socketSendFileInfo,
+    receiveResponse: socketReceiveResponse,
+    cancelFileTransfer: socketCancelFileTransfer,
     receivedFile,
     cleanup,
-    changeState,
-  } = useSocket((data) => {
-    peer.handleSDP(data);
-  });
+    changeTransferState,
+  } = useSocket((data) => peer.handleSDP(data));
 
-  function sendReceiveFileConfirm(userid: string, f: File) {
+  const cacheKey = computed(() => `${fileInfo.name}_${fileInfo.size}`);
+
+  function createPeer() {
+    peer = new Peer(
+      undefined,
+      (data?: any) => sendMessage("sdp", data),
+      () => changeTransferState("rtc_connected")
+    );
+  }
+
+  function sendFileInfo(userid: string, f: File) {
     file.value = f;
     const { name, size } = f;
+    fileInfo.name = name;
+    fileInfo.size = size;
 
-    sendFileInfo(userid, { name, size });
+    socketSendFileInfo(userid, { name, size });
   }
 
   watch(transferState, (value) => {
     // A 创建 rtc
     if (value === "received_response_agree") {
-      peer = new Peer(undefined, (data?: any) => {
-        emitMessage(targetUserId.value, "sdp", data);
-      });
+      changeTransferState("rtc_connecting");
+      createPeer();
 
       peer.sendOffer();
 
       peer.channel!.onopen = function () {
-        changeState("sending_file_content");
-
-        // TODO: 续传判断 offset
-        // file.transfered = offset * CHUNK_SIZE;
+        changeTransferState("sending_file_content");
 
         channelSend(
           (data) => this.send(data),
           file.value!,
-          0,
+          // 续传判断 offset
+          fileInfo.offset,
           (chunk) => {
-            // // TODO: 传送速率
-            // const isTransfering = transfer.state === "transfering";
-            // if (isTransfering) {
-            //   transfer.transfered += chunk.byteLength;
-            // }
-            return transferState.value === "sending_file_content";
+            fileInfo.transfered += chunk.byteLength;
+
+            const isTransfering =
+              transferState.value === "sending_file_content";
+
+            return isTransfering && peer.channel?.readyState === "open";
           }
         );
       };
     }
   });
 
-  // B 同意接收
-  function confirmReceiveFile(userid: string) {
-    receiveResponse(userid, true);
-    peer = new Peer(undefined, (data?: any) => {
-      emitMessage(targetUserId.value, "sdp", data);
-    });
+  function receiveResponse(response: boolean) {
+    if (response) {
+      const offset = cache.get(cacheKey.value)?.length;
+      socketReceiveResponse(true, offset);
+      changeTransferState("rtc_connecting");
+      createPeer();
 
-    // 接收文件
-    peer.peerConn!.ondatachannel = (event) => {
-      event.channel.onmessage = receive((count, buffer) => {
-        fileinfo.transfered += count;
-        const received = fileinfo.transfered === fileinfo.size;
+      // 接收文件
+      peer.peerConn!.ondatachannel = (event) => {
+        changeTransferState("awaiting_file_content");
 
-        // 下载文件
-        if (received) {
-          changeState("received_success");
-          downloadBlob(fileinfo.name, buffer);
-          clear();
-        }
+        event.channel.onmessage = receive(cacheKey.value, (buffer, count) => {
+          // 取消的情况下，不再接收数据
+          if (transferState.value === "awaiting_file_content") {
+            changeTransferState("receiving_file_content");
+          }
 
-        return received;
-      });
-    };
+          fileInfo.transfered = count;
+          const received = fileInfo.transfered === fileInfo.size;
+
+          // 设置缓存，3 分钟过期
+          cache.set(cacheKey.value, buffer, 3 * 60 * 1000);
+
+          // 下载文件
+          if (received) {
+            receivedFile();
+            downloadBlob(fileInfo.name, buffer);
+
+            nextTick(() => {
+              clean();
+            });
+          }
+
+          return received;
+        });
+      };
+    } else {
+      socketReceiveResponse(false);
+    }
   }
 
-  function clear() {
+  function cancelFileTransfer() {
+    socketCancelFileTransfer();
+    clean();
+  }
+
+  function clean() {
     cleanup();
-    peer.clean();
+    if (peer) {
+      peer.clean();
+    }
   }
 
   return {
-    sendReceiveFileConfirm,
-    targetUserId,
-    confirmReceiveFile,
-    getCurrentUserId,
+    sendFileInfo,
+    targetUser,
+    getCurrentUser,
     userList,
-    refresh,
+    refreshUserList,
     transferState,
-    fileinfo,
+    fileInfo,
     receiveResponse,
-    // sendFileContent,
     cancelFileTransfer,
-    receivedFile,
-    clear,
-    changeState,
+    clean,
   };
 }

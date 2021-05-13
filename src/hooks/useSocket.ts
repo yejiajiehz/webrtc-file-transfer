@@ -1,10 +1,12 @@
-import { ref, reactive } from "vue";
+import { ref, reactive, nextTick } from "vue";
 import { getSocket } from "@/utils/socket";
 import { log } from "@/utils/log";
+import { CHUNK_SIZE } from "@/utils/file";
 
 // 传输状态
-type TransferState =
-  | ""
+export type TransferState =
+  // 空闲状态
+  | "idle"
   // A 发送文件信息
   | "sending_file_info"
   // B 接收文件信息
@@ -14,46 +16,49 @@ type TransferState =
   // A 接收回应
   | "received_response_agree"
   | "received_response_reject"
+  | "rtc_connecting"
+  | "rtc_connected"
+  // | "rct_disconnect"
   // B 等待文件内容
   | "awaiting_file_content"
   // A 发送文件内容
   | "sending_file_content"
   // B 接收文件内容
-  | "receiving_file_data"
+  | "receiving_file_content"
   // 发送取消
   | "sending_cancel"
   // 接收取消
   | "received_cancel"
-  // B 发送成功
-  | "sending_success"
+  // B 发送成功消息
+  | "sending_complated"
   // A 接收成功
-  | "received_success"
+  | "received_complated"
+  // 用户退出
   | "received_exit";
-
-// A: 发送文件信息、接收回应、发送文件内容、完成接收
-// B: 接收文件信息、发送回应、接收文件内容、完成接收
 
 type SocketMessageType =
   | "send-file-info"
   | "receive-response"
-  | "send-file-content"
-  | "cancel-ransfer"
+  | "cancel-transfer"
   | "received-file-data"
   | "sdp";
 
-const defaultFileInfo = { name: "", size: 0, transfered: 0 };
+const defaultFileInfo = { name: "", size: 0, transfered: 0, offset: 0 };
 
 export function useSocket(handleSDP: (data: any) => void) {
   const socket = getSocket();
 
+  // 用户列表
   const userList = ref<string[]>([]);
-  const targetUserId = ref("");
-
-  const transferState = ref<TransferState>("");
+  // 联通对象
+  const targetUser = ref("");
+  // 传输状态
+  const transferState = ref<TransferState>("idle");
+  // 文件信息
   const fileInfo = reactive(defaultFileInfo);
 
   /* 用户相关 */
-  function getCurrentUserId() {
+  function getCurrentUser() {
     return socket.id;
   }
 
@@ -62,26 +67,39 @@ export function useSocket(handleSDP: (data: any) => void) {
     userList.value = users;
   });
 
-  const refresh = () => {
+  // 刷新用户列表
+  const refreshUserList = () => {
     socket.emit("P2P:user-list");
   };
 
   // 在文件传输中退出
-  socket.on("P2p:exit", function (userid: string) {
-    if (userid === targetUserId.value) {
-      if (transferState.value === "sending_file_content") {
-        transferState.value = "received_exit";
-        cleanup();
-        // XXX: 重试机制？传输方退出之后，理论上可以断点续传
-      }
+  socket.on("P2P:exit", function (userid: string) {
+    // 连接对象退出
+    const isTargetExit = userid === targetUser.value;
+    // 传输中
+    const transfering = [
+      "sending_file_content",
+      "receiving_file_content",
+    ].includes(transferState.value);
+
+    // XXX: 重试机制？传输方退出之后，理论上可以断点续传
+    if (isTargetExit && transfering) {
+      transferState.value = "received_exit";
+      cleanup();
     }
   });
 
   /* 传输相关 */
 
-  function emitMessage(userid: string, type: SocketMessageType, data?: any) {
-    log("socket: emit message to " + userid, type, data);
-    socket.emit("message", userid, { type, data });
+  // socket 消息
+  function sendMessage(type: SocketMessageType, data?: any) {
+    log("socket: emit message to " + targetUser.value, type, data);
+    socket.emit("message", targetUser.value, { type, data });
+  }
+
+  // 修改状态
+  function changeTransferState(state: TransferState) {
+    transferState.value = state;
   }
 
   // 发送文件信息
@@ -89,31 +107,33 @@ export function useSocket(handleSDP: (data: any) => void) {
     target: string,
     fileinfo: { name: string; size: number }
   ) {
-    targetUserId.value = target;
+    targetUser.value = target;
     transferState.value = "sending_file_info";
-    emitMessage(target, "send-file-info", fileinfo);
+    sendMessage("send-file-info", fileinfo);
     transferState.value = "awaiting_response";
   }
 
   // 发送回应
-  function receiveResponse(from: string, response: boolean) {
-    transferState.value = "awaiting_file_content";
-    emitMessage(from, "receive-response", response);
-  }
+  function receiveResponse(response: boolean, offset?: number) {
+    sendMessage("receive-response", { response, offset });
 
-  function changeState(state: TransferState) {
-    transferState.value = state;
+    if (response) {
+      transferState.value = "rtc_connecting";
+    } else {
+      cleanup();
+    }
   }
 
   // 取消
-  function cancelFileTransfer(userid: string) {
+  function cancelFileTransfer() {
     transferState.value = "sending_cancel";
-    emitMessage(userid, "cancel-ransfer");
+    sendMessage("cancel-transfer");
   }
 
-  // 完成接收
+  // 完成文件接收
   function receivedFile() {
-    transferState.value = "received_success";
+    transferState.value = "received_complated";
+    sendMessage("received-file-data");
   }
 
   // 事件处理
@@ -123,7 +143,7 @@ export function useSocket(handleSDP: (data: any) => void) {
       from: string,
       { type, data }: { type: SocketMessageType; data: any }
     ) {
-      targetUserId.value = from;
+      targetUser.value = from;
 
       log("socket: received message from " + from, type, data);
       switch (type) {
@@ -132,24 +152,26 @@ export function useSocket(handleSDP: (data: any) => void) {
           fileInfo.name = data.name;
           fileInfo.size = data.size;
           break;
-        case "receive-response":
-          transferState.value =
-            data === true
-              ? "received_response_agree"
-              : "received_response_reject";
-          // TODO: 传递内存中是否已经有保存的文件，复用续传
+        case "receive-response": {
+          const agree = data.response === true;
 
-          // 使用 watch 创建 rtc 连接
+          transferState.value = agree
+            ? // 使用 watch 创建 rtc 连接
+              "received_response_agree"
+            : "received_response_reject";
+
+          // 续传
+          if (agree && data.offset) {
+            fileInfo.offset = data.offset;
+            fileInfo.transfered = data.offset * CHUNK_SIZE;
+          }
+
           break;
-        case "send-file-content":
-          transferState.value = "receiving_file_data";
-          // TODO: 剥离？？
-          fileInfo.transfered += data;
-          break;
+        }
         case "received-file-data":
-          transferState.value = "received_success";
+          transferState.value = "received_complated";
           break;
-        case "cancel-ransfer":
+        case "cancel-transfer":
           transferState.value = "received_cancel";
           break;
         case "sdp":
@@ -162,24 +184,31 @@ export function useSocket(handleSDP: (data: any) => void) {
   );
 
   function cleanup() {
-    transferState.value = "";
-    Object.assign(fileInfo, defaultFileInfo);
+    nextTick(() => {
+      transferState.value = "idle";
+      targetUser.value = "";
+
+      fileInfo.name = "";
+      fileInfo.size = 0;
+      fileInfo.transfered = 0;
+      fileInfo.offset = 0;
+    });
   }
 
   return {
-    emitMessage,
+    sendMessage,
 
-    getCurrentUserId,
-    targetUserId,
+    getCurrentUser,
+    targetUser,
     userList,
-    refresh,
+    refreshUserList,
 
     transferState,
-    fileinfo: fileInfo,
+    fileInfo,
 
     sendFileInfo,
     receiveResponse,
-    changeState,
+    changeTransferState,
     cancelFileTransfer,
     receivedFile,
 

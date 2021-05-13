@@ -4,7 +4,11 @@ let socket: Socket;
 export function getSocket() {
   if (!socket) {
     // 连接本地服务器
-    socket = io("http://localhost:8080");
+    socket = io("http://localhost:8080", {
+      extraHeaders: {
+        Authorization: "Bearer authorization_token",
+      },
+    });
     // TOOD: 用户名称
     socket.emit("P2P:join");
   }

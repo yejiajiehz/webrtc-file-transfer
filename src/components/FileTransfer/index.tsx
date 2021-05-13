@@ -10,7 +10,7 @@ const FileTransfer = defineComponent({
       required: true,
     },
     transferred: { type: Number, required: true },
-    cancel: { type: Function, required: true },
+    cancel: { type: Function as PropType<() => void>, required: true },
   },
   setup(props) {
     const speed = useSpeed(props, "transferred");
