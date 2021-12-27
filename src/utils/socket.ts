@@ -9,7 +9,7 @@ export function getSocket() {
         Authorization: "Bearer authorization_token",
       },
     });
-    // TOOD: 用户名称
+    // TODO: 用户名称
     socket.emit("P2P:join");
   }
 

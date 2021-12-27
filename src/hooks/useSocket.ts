@@ -30,9 +30,9 @@ export type TransferState =
   // 接收取消
   | "received_cancel"
   // B 发送成功消息
-  | "sending_complated"
+  | "sending_completed"
   // A 接收成功
-  | "received_complated"
+  | "received_completed"
   // 用户退出
   | "received_exit";
 
@@ -43,7 +43,7 @@ type SocketMessageType =
   | "received-file-data"
   | "sdp";
 
-const defaultFileInfo = { name: "", size: 0, transfered: 0, offset: 0 };
+const defaultFileInfo = { name: "", size: 0, transferred: 0, offset: 0 };
 
 export function useSocket(handleSDP: (data: any) => void) {
   const socket = getSocket();
@@ -77,13 +77,13 @@ export function useSocket(handleSDP: (data: any) => void) {
     // 连接对象退出
     const isTargetExit = userid === targetUser.value;
     // 传输中
-    const transfering = [
+    const transferring = [
       "sending_file_content",
       "receiving_file_content",
     ].includes(transferState.value);
 
     // XXX: 重试机制？传输方退出之后，理论上可以断点续传
-    if (isTargetExit && transfering) {
+    if (isTargetExit && transferring) {
       transferState.value = "received_exit";
       cleanup();
     }
@@ -132,7 +132,7 @@ export function useSocket(handleSDP: (data: any) => void) {
 
   // 完成文件接收
   function receivedFile() {
-    transferState.value = "received_complated";
+    transferState.value = "received_completed";
     sendMessage("received-file-data");
   }
 
@@ -163,13 +163,13 @@ export function useSocket(handleSDP: (data: any) => void) {
           // 续传
           if (agree && data.offset) {
             fileInfo.offset = data.offset;
-            fileInfo.transfered = data.offset * CHUNK_SIZE;
+            fileInfo.transferred = data.offset * CHUNK_SIZE;
           }
 
           break;
         }
         case "received-file-data":
-          transferState.value = "received_complated";
+          transferState.value = "received_completed";
           break;
         case "cancel-transfer":
           transferState.value = "received_cancel";
@@ -190,7 +190,7 @@ export function useSocket(handleSDP: (data: any) => void) {
 
       fileInfo.name = "";
       fileInfo.size = 0;
-      fileInfo.transfered = 0;
+      fileInfo.transferred = 0;
       fileInfo.offset = 0;
     });
   }

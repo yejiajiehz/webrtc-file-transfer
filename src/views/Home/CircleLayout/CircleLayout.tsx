@@ -4,7 +4,7 @@ import _ from "lodash";
 import { useCircle } from "./useCircle";
 
 export function CircleLayout(props: { count?: number }) {
-  const circelCount = props.count || 4;
+  const circleCount = props.count || 4;
 
   const { r: baseR, center, gutter } = useCircle();
 
@@ -13,7 +13,7 @@ export function CircleLayout(props: { count?: number }) {
       class="circles"
       style={{ transformOrigin: `${center.x}px ${center.y}px` }}
     >
-      {_.range(0, circelCount).map((index) => {
+      {_.range(0, circleCount).map((index) => {
         const r = baseR + gutter * index;
 
         return <circle class="circle" cx={center.x} cy={center.y} r={r} />;

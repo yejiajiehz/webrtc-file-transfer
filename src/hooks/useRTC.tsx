@@ -61,12 +61,12 @@ export function useRTC() {
           // 续传判断 offset
           fileInfo.offset,
           (chunk) => {
-            fileInfo.transfered += chunk.byteLength;
+            fileInfo.transferred += chunk.byteLength;
 
-            const isTransfering =
+            const isTransferring =
               transferState.value === "sending_file_content";
 
-            return isTransfering && peer.channel?.readyState === "open";
+            return isTransferring && peer.channel?.readyState === "open";
           }
         );
       };
@@ -90,8 +90,8 @@ export function useRTC() {
             changeTransferState("receiving_file_content");
           }
 
-          fileInfo.transfered = count;
-          const received = fileInfo.transfered === fileInfo.size;
+          fileInfo.transferred = count;
+          const received = fileInfo.transferred === fileInfo.size;
 
           // 设置缓存，3 分钟过期
           cache.set(cacheKey.value, buffer, 3 * 60 * 1000);

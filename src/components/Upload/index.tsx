@@ -9,7 +9,7 @@ export const Upload = defineComponent({
     onChange: Function as PropType<(fileList: File[]) => void>,
   },
   render() {
-    const custompProps = this.directory
+    const customProps = this.directory
       ? { directory: true, webkitdirectory: true }
       : null;
 
@@ -35,7 +35,7 @@ export const Upload = defineComponent({
             this.onChange?.(files ? [...files] : []);
             (this.$refs.fileInputRef as any).value = null;
           }}
-          {...custompProps}
+          {...customProps}
         />
 
         {children}

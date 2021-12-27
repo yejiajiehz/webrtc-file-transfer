@@ -1,7 +1,7 @@
 import "./style.less";
 
 import { computed, defineComponent } from "vue";
-import { Drawer, Modal } from "ant-design-vue";
+import { Modal } from "ant-design-vue";
 import filesize from "filesize";
 
 import { FileTransfer } from "@/components/FileTransfer";
@@ -29,7 +29,7 @@ const HomePage = defineComponent({
 
     watchTransferState(transferState, clean);
 
-    const transfering = computed(() =>
+    const transferring = computed(() =>
       ["sending_file_content", "receiving_file_content"].includes(
         transferState.value
       )
@@ -39,7 +39,7 @@ const HomePage = defineComponent({
 
     return {
       transferState,
-      transfering,
+      transferring,
       canSendFile,
 
       targetUser,
@@ -65,7 +65,7 @@ const HomePage = defineComponent({
         <div>当前用户：{this.getCurrentUser()}</div>
 
         <SendFile
-          actived={this.targetUser}
+          activated={this.targetUser}
           canSendFile={this.canSendFile}
           users={users}
           onRefresh={this.refreshUserList}
@@ -93,11 +93,11 @@ const HomePage = defineComponent({
           </div>
         </Modal>
 
-        {this.transfering && (
+        {this.transferring && (
           <FileTransfer
             file={this.fileInfo}
             cancel={this.cancelFileTransfer}
-            transferred={this.fileInfo.transfered}
+            transferred={this.fileInfo.transferred}
           />
         )}
       </div>

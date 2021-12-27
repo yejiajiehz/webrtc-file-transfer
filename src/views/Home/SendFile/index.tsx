@@ -6,13 +6,12 @@ import { Button, message, Upload, Avatar, Drawer } from "ant-design-vue";
 import fileSize from "filesize";
 import { FILE_SIZE_LIMIT } from "@/utils/file";
 import { CircleLayout, layout } from "../CircleLayout";
-import _ from "lodash";
 import classNames from "classnames";
 
 export const SendFile = defineComponent({
   name: "SendFile",
   props: {
-    actived: String,
+    activated: String,
     canSendFile: Boolean,
     onFileChange: {
       type: Function as PropType<(userid: string, file: File) => void>,
@@ -85,8 +84,10 @@ export const SendFile = defineComponent({
                       return false;
                     }}
                   >
-                    {/* TOOD: 如果是接收中，展示文件信息 */}
-                    <div class={classNames({ actived: this.actived === user })}>
+                    {/* TODO: 如果是接收中，展示文件信息 */}
+                    <div
+                      class={classNames({ activated: this.activated === user })}
+                    >
                       <Avatar />
                       <div>{user}</div>
                     </div>

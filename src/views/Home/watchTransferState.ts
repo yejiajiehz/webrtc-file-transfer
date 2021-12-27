@@ -17,7 +17,7 @@ const messageMap: Partial<
   received_response_reject: "对方拒绝接收文件！",
   received_cancel: "对方取消文件传输！",
   received_exit: "对方断开连接，文件传输失败！",
-  received_complated: { type: "success", text: "文件传输成功！" },
+  received_completed: { type: "success", text: "文件传输成功！" },
 };
 
 // 在一段时间内无反馈，认为失败

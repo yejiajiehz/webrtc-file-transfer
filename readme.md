@@ -2,20 +2,20 @@
 
 ## 使用方法
 
-1. 启动 server
+1. 启动 socket server
 ```
 cd server
 npm i
 npm run start
 ```
 
-2. 启动页面
+2. 启动前端页面
 ```
 npm i
 npm run serve
 ```
 
-3. 打开两个页面，传输文件
+3. 打开两个 http://localhost:3000/ 页面，传输文件
 
 ## 流程
 
@@ -27,9 +27,10 @@ npm run serve
 6. 创建 rtc 连接，发送文件
 
 ## 参考
-4. [WebRTC samples](https://webrtc.github.io/samples/)
-1. [WebRTC samples Transfer a file](https://webrtc.github.io/samples/src/content/datachannel/filetransfer/)
-2. [WebRTC 总结](https://ejin66.github.io/2018/09/03/webrtc-summary.html)
-3. [WebRTC中的信令和内网穿透技术 STUN / TURN](https://blog.csdn.net/shaosunrise/article/details/83627828)
+1. [WebRTC samples](https://webrtc.github.io/samples/)
+2. [WebRTC samples Transfer a file](https://webrtc.github.io/samples/src/content/datachannel/filetransfer/)
+3. [WebRTC 总结](https://ejin66.github.io/2018/09/03/webrtc-summary.html)
+4. [WebRTC中的信令和内网穿透技术 STUN / TURN](https://blog.csdn.net/shaosunrise/article/details/83627828)
 5. [A quick cheatsheet for socket.io](https://gist.github.com/alexpchin/3f257d0bb813e2c8c476)
-6. [sharedrop](https://github.com/szimek/sharedrop)
+6. https://snapdrop.net/scripts/network.js
+7. https://www.sharedrop.io/

@@ -9,13 +9,13 @@ export class Peer {
   constructor(
     config: RTCConfiguration | undefined,
     sendMessage: (data: any) => void,
-    onConnectd?: () => void
+    onConnected?: () => void
   ) {
     this.sendMessage = sendMessage;
-    this.startConnect(config, onConnectd);
+    this.startConnect(config, onConnected);
   }
 
-  startConnect(config?: RTCConfiguration, onConnectd?: () => void) {
+  startConnect(config?: RTCConfiguration, onConnected?: () => void) {
     const peerConn = new RTCPeerConnection(config);
     const channel = peerConn.createDataChannel("file");
     channel.binaryType = "arraybuffer";
@@ -33,7 +33,7 @@ export class Peer {
       log("peer: connectionState change:", this.connectionState);
       this.connectionState = peerConn.connectionState;
       if (this.connectionState === "connected") {
-        onConnectd?.();
+        onConnected?.();
       }
     };
 

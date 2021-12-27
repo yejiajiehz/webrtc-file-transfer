@@ -25,8 +25,8 @@ export async function channelSend(
     const buffer = await chunk.arrayBuffer();
 
     const done = end === file.size;
-    const transfering = onSendChunk?.(buffer, done);
-    const canSend = transfering !== false;
+    const transferring = onSendChunk?.(buffer, done);
+    const canSend = transferring !== false;
 
     if (canSend) {
       if (buffer.byteLength) {
